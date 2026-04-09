@@ -54,37 +54,29 @@ jobs:
 
       - name: Patch MainActivity to pre-request microphone permission
         run: |
-          python3 - <<'EOF'
-          content = """package com.vocalflow.app;
-
-import android.Manifest;
-import android.content.pm.PackageManager;
-import android.os.Bundle;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import com.getcapacitor.BridgeActivity;
-
-public class MainActivity extends BridgeActivity {
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        // Request microphone permission at startup so WebView gets it immediately on first use
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(
-                this,
-                new String[]{Manifest.permission.RECORD_AUDIO},
-                1001
-            );
-        }
-    }
-}
-"""
-          with open('android/app/src/main/java/com/vocalflow/app/MainActivity.java', 'w') as f:
-              f.write(content)
-          print("MainActivity.java patched successfully")
-          EOF
+          cat > android/app/src/main/java/com/vocalflow/app/MainActivity.java << 'JAVAEOF'
+          package com.vocalflow.app;
+          import android.Manifest;
+          import android.content.pm.PackageManager;
+          import android.os.Bundle;
+          import androidx.core.app.ActivityCompat;
+          import androidx.core.content.ContextCompat;
+          import com.getcapacitor.BridgeActivity;
+          public class MainActivity extends BridgeActivity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                          != PackageManager.PERMISSION_GRANTED) {
+                      ActivityCompat.requestPermissions(
+                          this,
+                          new String[]{Manifest.permission.RECORD_AUDIO},
+                          1001
+                      );
+                  }
+              }
+          }
+          JAVAEOF
 
       - name: Sync Capacitor
         run: npx cap sync android
