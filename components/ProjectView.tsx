@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Project, Soundtrack } from '../types';
 import AudioVisualizer from './AudioVisualizer';
+import { Capacitor } from '@capacitor/core';
 
 // Fallback UUID generator for older browsers
 const generateId = () => {
@@ -228,6 +229,14 @@ const ProjectView: React.FC<ProjectViewProps> = ({ project, onBack, onUpdate }) 
     if (isProcessing) return;
     try {
       setIsProcessing(true);
+
+      // Check getUserMedia availability
+      if (!navigator.mediaDevices?.getUserMedia) {
+        alert('Audio recording is not supported on this device.');
+        setIsProcessing(false);
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       
@@ -273,9 +282,13 @@ const ProjectView: React.FC<ProjectViewProps> = ({ project, onBack, onUpdate }) 
       mediaRecorderRef.current = recorder;
       recorder.start(1000);
       setIsRecording(true);
-    } catch (err) {
-      console.error("Mic error:", err);
-      alert("Microphone permission denied.");
+    } catch (err: any) {
+      console.error("Mic error:", err?.name, err?.message);
+      if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
+        alert('Microphone permission denied.\n\nPlease:\n1. Go to Settings → Apps → VocalFlow → Permissions\n2. Enable Microphone\n3. Close & reopen VocalFlow');
+      } else {
+        alert(`Could not start recording: ${err?.message || 'Unknown error'}`);
+      }
     } finally {
       setIsProcessing(false);
     }

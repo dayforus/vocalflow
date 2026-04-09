@@ -40,20 +40,20 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onCreate, onDelete,
       {isAdding && (
         <form onSubmit={handleSubmit} className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl animate-in fade-in slide-in-from-top-2">
           <label className="block text-sm font-medium text-slate-400 mb-2">Project Name</label>
+          <input
+            autoFocus
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="E.g., Meeting Notes, Podcast Ep 1"
+            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-3"
+          />
           <div className="flex gap-2">
-            <input 
-              autoFocus
-              type="text" 
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="E.g., Meeting Notes, Podcast Ep 1"
-              className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <button type="submit" className="bg-indigo-600 px-4 py-2 rounded-lg font-medium">Create</button>
-            <button 
-              type="button" 
+            <button type="submit" className="flex-1 bg-indigo-600 px-4 py-2 rounded-lg font-medium text-white">Create</button>
+            <button
+              type="button"
               onClick={() => setIsAdding(false)}
-              className="bg-slate-700 px-4 py-2 rounded-lg text-slate-300"
+              className="flex-1 bg-slate-700 px-4 py-2 rounded-lg text-slate-300"
             >
               Cancel
             </button>
