@@ -237,10 +237,26 @@ const ProjectView: React.FC<ProjectViewProps> = ({ project, onBack, onUpdate }) 
         return;
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      
-      const recorder = new MediaRecorder(stream);
+      // Retry up to 3 times — audio source can be briefly busy on Android
+      let stream: MediaStream | null = null;
+      let lastErr: any = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          break;
+        } catch (e: any) {
+          lastErr = e;
+          if (e?.name === 'NotReadableError' && attempt < 2) {
+            await new Promise(r => setTimeout(r, 800));
+          } else {
+            throw e;
+          }
+        }
+      }
+      if (!stream) throw lastErr;
+      streamRef.current = stream!;
+
+      const recorder = new MediaRecorder(stream!);
       audioChunksRef.current = [];
       
       recorder.ondataavailable = (e) => {

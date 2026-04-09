@@ -52,74 +52,39 @@ jobs:
               f.write(content)
           EOF
 
-      - name: Patch MainActivity for microphone WebView permission
+      - name: Patch MainActivity to pre-request microphone permission
         run: |
-          cat > android/app/src/main/java/com/vocalflow/app/MainActivity.java << 'JAVAEOF'
-          package com.vocalflow.app;
+          python3 - <<'EOF'
+          content = """package com.vocalflow.app;
 
-          import android.Manifest;
-          import android.content.pm.PackageManager;
-          import android.os.Bundle;
-          import android.webkit.ConsoleMessage;
-          import android.webkit.PermissionRequest;
-          import android.webkit.WebChromeClient;
-          import androidx.core.app.ActivityCompat;
-          import androidx.core.content.ContextCompat;
-          import com.getcapacitor.BridgeActivity;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Bundle;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import com.getcapacitor.BridgeActivity;
 
-          public class MainActivity extends BridgeActivity {
-              private static final int AUDIO_PERMISSION_CODE = 2001;
-              private PermissionRequest pendingPermission;
+public class MainActivity extends BridgeActivity {
 
-              @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-
-                  // Override WebChromeClient to handle audio permission requests from WebView
-                  getBridge().getWebView().setWebChromeClient(new WebChromeClient() {
-                      @Override
-                      public void onPermissionRequest(final PermissionRequest request) {
-                          runOnUiThread(() -> {
-                              for (String resource : request.getResources()) {
-                                  if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) {
-                                      pendingPermission = request;
-                                      if (ContextCompat.checkSelfPermission(MainActivity.this,
-                                              Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                                          request.grant(request.getResources());
-                                      } else {
-                                          ActivityCompat.requestPermissions(MainActivity.this,
-                                                  new String[]{Manifest.permission.RECORD_AUDIO},
-                                                  AUDIO_PERMISSION_CODE);
-                                      }
-                                      return;
-                                  }
-                              }
-                              request.deny();
-                          });
-                      }
-
-                      @Override
-                      public boolean onConsoleMessage(ConsoleMessage msg) {
-                          android.util.Log.d("VocalFlow", msg.message());
-                          return true;
-                      }
-                  });
-              }
-
-              @Override
-              public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-                  super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-                  if (requestCode == AUDIO_PERMISSION_CODE && pendingPermission != null) {
-                      if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                          pendingPermission.grant(pendingPermission.getResources());
-                      } else {
-                          pendingPermission.deny();
-                      }
-                      pendingPermission = null;
-                  }
-              }
-          }
-          JAVAEOF
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        // Request microphone permission at startup so WebView gets it immediately on first use
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                this,
+                new String[]{Manifest.permission.RECORD_AUDIO},
+                1001
+            );
+        }
+    }
+}
+"""
+          with open('android/app/src/main/java/com/vocalflow/app/MainActivity.java', 'w') as f:
+              f.write(content)
+          print("MainActivity.java patched successfully")
+          EOF
 
       - name: Sync Capacitor
         run: npx cap sync android
