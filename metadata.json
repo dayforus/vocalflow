@@ -1,0 +1,7 @@
+{
+  "name": "VocalFlow Project Recorder",
+  "description": "A smart project-based recording application that automatically splits audio into tracks based on voice activity and features a sequential playlist playback system.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
