@@ -9,3 +9,11 @@ body {
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
 }
+
+/* Allow text input in form elements — body's user-select: none blocks typing on Android WebView */
+input,
+textarea,
+[contenteditable] {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+}
