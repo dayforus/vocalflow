@@ -52,27 +52,61 @@ jobs:
               f.write(content)
           EOF
 
-      - name: Patch MainActivity to pre-request microphone permission
+      - name: Patch MainActivity for reliable microphone WebView permission
         run: |
           cat > android/app/src/main/java/com/vocalflow/app/MainActivity.java << 'JAVAEOF'
           package com.vocalflow.app;
           import android.Manifest;
           import android.content.pm.PackageManager;
           import android.os.Bundle;
+          import android.webkit.ConsoleMessage;
+          import android.webkit.PermissionRequest;
+          import android.webkit.WebChromeClient;
           import androidx.core.app.ActivityCompat;
           import androidx.core.content.ContextCompat;
           import com.getcapacitor.BridgeActivity;
           public class MainActivity extends BridgeActivity {
+              private static final int AUDIO_CODE = 1001;
+              private PermissionRequest pendingPermission;
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
-                  if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                          != PackageManager.PERMISSION_GRANTED) {
-                      ActivityCompat.requestPermissions(
-                          this,
-                          new String[]{Manifest.permission.RECORD_AUDIO},
-                          1001
-                      );
+                  android.webkit.WebView wv = getBridge().getWebView();
+                  wv.getSettings().setMediaPlaybackRequiresUserGesture(false);
+                  wv.setWebChromeClient(new WebChromeClient() {
+                      @Override
+                      public void onPermissionRequest(final PermissionRequest request) {
+                          boolean needsAudio = false;
+                          for (String r : request.getResources()) {
+                              if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(r)) {
+                                  needsAudio = true;
+                                  break;
+                              }
+                          }
+                          if (!needsAudio) { request.deny(); return; }
+                          if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                              request.grant(request.getResources());
+                          } else {
+                              pendingPermission = request;
+                              ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.RECORD_AUDIO}, AUDIO_CODE);
+                          }
+                      }
+                      @Override
+                      public boolean onConsoleMessage(ConsoleMessage msg) {
+                          android.util.Log.d("VocalFlow", msg.message()); return true;
+                      }
+                  });
+              }
+              @Override
+              public void onRequestPermissionsResult(int code, String[] perms, int[] results) {
+                  super.onRequestPermissionsResult(code, perms, results);
+                  if (code == AUDIO_CODE && pendingPermission != null) {
+                      if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
+                          pendingPermission.grant(pendingPermission.getResources());
+                      } else {
+                          pendingPermission.deny();
+                      }
+                      pendingPermission = null;
                   }
               }
           }
